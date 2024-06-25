@@ -1,5 +1,5 @@
 # computer-vision-assignments
-Completed assignments for Computer Vision (PVID_I) class at FIIT.
+Completed assignments for the Computer Vision course at FIIT.
 
 ## Points
 assignment1 - 4/5
