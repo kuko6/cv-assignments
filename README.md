@@ -1,11 +1,11 @@
-# computer-vision-assignments
-Completed assignments for the Computer Vision course at FIIT.
+# Computer Vision Assignments
+Completed assignments for the Computer Vision course at FIIT. All assignments execept the last one are written focus on using a "classical approach" by using the OpenCV library. The last assignment is focused on using deep learning for image classification.
 
-## Points
-assignment1 - 4/5
+## Assignments
+assignment1 - Contour Analysis
 
-assignment2 - 7/10
+assignment2 - Image Correction and Enhancement
 
-assignment3 - 10/10
+assignment3 -  Motion Tracking and Image Segmentation
 
-assignment4 - 13/15
+assignment4 - Classification of American Sign Language characters from video

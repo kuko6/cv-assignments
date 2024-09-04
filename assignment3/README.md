@@ -1,9 +1,7 @@
 # assignment-3
 
-meno: Jakub Povinec
-- - - -
 ## Motion tracking
-Zdrojový kód pre túto časť zadania sa nachádza v  `motion.py`.  Časť kódu, ktorá slúži na prechádzanie videa je pre všetky úlohy viacmenej rovnaká a spočíva v prechádzaní daného videa po jednotlivých 'framoch', kde každý frame sa najskôr prekonvertuje do grayscale, aby sa dal použiť v ďalších metódach. 
+The source code for this part of the assignment is in `motion.py`. The part of the code that is used for reading of the video is more or less the same for all tasks and consists of iterating the given video frame by frame, where each frame is first converted to grayscale so that it can be used in other methods.
 
 ```py
 # [OpenCV: Optical Flow](https://docs.opencv.org/4.x/d4/dee/tutorial_optical_flow.html)
@@ -13,9 +11,9 @@ old_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
 while(vid.isOpened()):
     ret, frame = vid.read()
-    if not ret or (cv2.waitKey(30) & 0xff == 27): 
-        break 
-    
+    if not ret or (cv2.waitKey(30) & 0xff == 27):
+        break
+
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     ...
@@ -23,21 +21,21 @@ while(vid.isOpened()):
 vid.release()
 ```
 
-Pri experimentoch sme použili dáta z [Pedestrian Dataset | Kaggle](https://www.kaggle.com/datasets/smeschke/pedestrian-dataset?resource=download) a [MOT Challenge - Data](https://motchallenge.net/data/MOT15/).
+In the experiments, we used data from [Pedestrian Dataset | Kaggle](https://www.kaggle.com/datasets/smeschke/pedestrian-dataset?resource=download) and [MOT Challenge - Data](https://motchallenge.net/data/MOT15/).
 
 ### Sparse optical flow
-V tejto úlohe sme sa snažili určiť **sparse optical flow** pomocou metódy **Lucas-Kanade**,  vizualizovať trajektóriu pohybujúceho objektu a ohraničiť ho bounding boxom.
+In this task, we tried to determine **sparse optical flow** by using the **Lucas-Kanade** method. We also visualized the trajectory of a moving objects and marked them with bounding boxes.
 
-Nazačiatku sme získali počiatočné klúčové body pomocou metódy `goodFeaturesToTrack()` z prvého 'framu' daného videa. 
+At fist, we obtained the initial key points by using the `goodFeaturesToTrack()` method from the first 'frame' of the given video.
 
 ```py
 old_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 kp0 = cv2.goodFeaturesToTrack(old_gray, mask=None, qualityLevel=0.01, maxCorners=300, minDistance=10)
-``` 
+```
 
-Parametre do funkcie sme zistili experimentálne na základe našich vstupných dát. 
+We determined the parameters of the function experimentally based on our input data.
 
-Následne sme už vypočítali 'optical flow' pomocou metódy `calcOpticalFlowPyrLK()` , do ktorej okrem ostatných parametrov, vstupuje predchádzajúci frame, aktualný frame a aktuálne body, ktoré sme získali v predchádzajúcom kroku.
+Subsequently, we have already calculated the 'optical flow'by  using the `calcOpticalFlowPyrLK()` method, which in addition to other parameters also includes the previous frame, the current frame and the current points that we obtained in the previous step.
 
 ```py
 # calculate optical flow
@@ -45,7 +43,7 @@ gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 kp1, st, _ = cv2.calcOpticalFlowPyrLK(old_gray, gray, kp0, None, winSize=(21, 21), maxLevel=5, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 5, 0.01))
 ```
 
-Táto metóda vracia nové klúčové body a pole status (s rovnakou dĺžkou ako pole bodov), ktoré hovorí, či sa pre daný bod podarilo nájsť vektor pohybu. Toto pole použijeme na odstránenie neplatných bodov.
+This method returns new keypoints and a status field (the same length as the points array) that tells whether the motion vector was found for the given point. We will use this field to remove invalid points.
 
 ```py
 if kp1 is not None:
@@ -53,7 +51,7 @@ if kp1 is not None:
     good_old = kp0[st==1]
 ```
 
-Ako ďalšie si vypočítame euklidovú vzdialenosť medzi novými a starými bodmi, ktorú použijeme na ďalšie odstránenie nevyhovujúcich bodov. Týmto spôsobom dokážeme odstrániť napr. väčšinu bodov z pozadia, ktoré predstavovali nejaký malý pohyb, ktorý nie je pre nás zaujímavý, napr. pohyb konárov vo vetre.
+Next, we calculate the Euclidean distance between the new and old points, which we will use to further remove inappropriate points. In this way, we can remove most of the points from the background that represented some small movement that is not interesting for us, e.g. movement of branches in the wind.
 
 ```py
 # calculate diff between points
@@ -69,19 +67,19 @@ for i, (new, old) in enumerate(zip(good_new, good_old)):
 print('remaining keypoints: ', len(moving_kp))
 ```
 
-Keďže body počas prechodu videa odstraňujeme je potrebné ich, v prípade, že sa ich už nenachádza dostatočné množstvo, znovu vytvoriť. 
+Since we remove the points during the transition of the video, it is necessary to re-create them if there are not enough of them.
 
 ```py
-# generate new keypoints 
+# generate new keypoints
 if len(kp0) < 5:
     new_kp = cv2.goodFeaturesToTrack(gray, mask=None, qualityLevel=0.05, maxCorners=200, minDistance=30)
     kp0 = np.concatenate((kp0, new_kp), axis=0)
 ```
 
-Nakoniec už len vykreslíme bounding box pre získané body.
+Finally, we just draw the bounding box for the obtained points.
 
 ```py
-# draw bounding box 
+# draw bounding box
 if len(moving_kp) > 1:
     x, y, w, h = cv2.boundingRect(np.array(moving_kp))
     frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -93,15 +91,15 @@ if len(moving_kp) > 1:
 
 ![](imgs/sparse_flow_night.gif)
 
-*Sparse flow v tme*
+*Sparse flow in dark*
 
-Túto metódu sa nám podarilo pomerne dobre vyladiť pre prvý príklad. Na druhú stranu má stále veľké nedostatky pri videu v tme.  
+We managed to fine-tune this method quite well for the first example. On the other hand, it still has major shortcomings when it comes to video in the dark.
 
-### Background substraction methods
-Ako ďalšie sme vyskúšali metódy **MoG** a **KNN**  na segmentáciu pohybujúceho objektu a taktiež sme ich použili aj na ich detekciu.
+### Background subtraction methods
+Next, we tried the **MoG** and **KNN** methods for segmentation of moving objects and also used them for their detection.
 
-#### Segmentácia pozadia
-Najskôr sme si vytvorili kernel (pre morfologické operácie) a inicializovali **MoG** a **KNN** substractor-y.
+#### Background segmentation
+First, we created a kernel (for morphological operations) and initialized **MoG** and **KNN** subtractors.
 
 ```py
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -109,7 +107,7 @@ mog = cv2.createBackgroundSubtractorMOG2(varThreshold=25, detectShadows=True)
 knn = cv2.createBackgroundSubtractorKNN(dist2Threshold=300, detectShadows=True)
 ```
 
-Ďalej už stačilo vytvorené objekty použiť na jednotlivé framy videa. Obidva substractor-y vrátia binárnu masku, ktorú sme ešte upravili pomocou morfologického opening-u (odstránenie malých artefaktov) a diletácie (zväčšenie obrysu objektu).
+Furthermore, it was enough to use the created objects for individual video frames. Both subtractors return a binary mask, which we further modified by using morphological opening (removal of small artifacts) and dilation (enlargement of the outline of the object).
 
 ```py
 while(vid.isOpened()):
@@ -140,16 +138,16 @@ while(vid.isOpened()):
 
 ![](imgs/mask_mog_night.gif)
 
-*MoG v tme*
+*MoG in dark*
 
 ![](imgs/mask_knn_night.gif)
 
-*KNN v tme*
+*KNN in dark*
 
-Pre prvé video je výsledok takmer identický, no pre video v tme je metóda **MoG** lepšia, keďže sa na maske nachádza daný objekt  po celý čas.
+For the first video, the result is almost identical, but for the video in the dark, the **MoG** method is better, since the mask of the object is visible trhought the whole video.
 
-#### Detekcia objektu
-Na detekovanie objektu sme najskôr vytvorili kontúry vo vytvorenej maske, z ktorých sme vybrali len tú najväčšiu a pre ňu sme následne vytvorili bounding box.  Na získanie súradníc bounding boxu sme si vytvorili vlastnú funkciu `get_bounding_box()`.
+#### Object detection
+To detect the object, we first created contours in the acquired mask, from which we selected only the largest one and then created a bounding box for it. To get the coordinates of the bounding box, we created our own function `get_bounding_box()`.
 
 ```py
 def get_bounding_box(mask, method=''):
@@ -159,7 +157,7 @@ def get_bounding_box(mask, method=''):
        if len(contours) > 0:
            largest_contour = max(contours, key=cv2.contourArea)
            x, y, w, h = cv2.boundingRect(largest_contour)
-           box = {'x': x, 'y': y, 'w': w, 'h': h} 
+           box = {'x': x, 'y': y, 'w': w, 'h': h}
    return box
 ```
 
@@ -178,31 +176,31 @@ if box_knn != None:
     )
 ```
 
-Zelený bounding box predstavuje **MoG** a červený **KNN**.
+Green bounding box represents **MoG** and red **KNN**.
 
 ![](imgs/background_sub_tracking.gif)
 
-*Porovnanie bounding boxov pre MoG a KNN*
+*Comparison of bounding boxes for MoG and KNN*
 
 ![](imgs/background_sub_tracking_night.gif)
 
-*Porovnanie bounding boxov pre MoG a KNN v tme*
+*Comparison of bounding boxes for MoG and KNN in the dark*
 
 #### Running average
-Ako ďalšie sme taktiež vyskúšali použiť metódu **running average** na segmentáciu pohybujúceho objektu. Táto metóda spočíva v tom, že počíta váhovaný priemer z posledných framov. Na začiatku sme si premennú, ktorá reprezentovala tento priemer, inicializovali na hodnotu prvého framu v grayscale. 
+Next, we also tried using the **running average** method for segmentation of a moving object. This method calculates a weighted average from the last frames. At the beginning, we initialized the variable that represented this average to the value of the first frame in grayscale.
 
 ```py
 running_avg = np.float32(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
 ```
 
-Následne sme ju už aktualizovali pomocou funkcie `accumulateWeighted()`. 
+Next we use the `accumulateWeighted()` function to update it.
 
 ```py
 # update the running average
 cv2.accumulateWeighted(gray, running_avg, alpha=0.4)
 ```
 
-Na to aby sme získali masku pohybujúceho objektu sme vypočítali rozdiel medzi aktuálnym framom a týmto priemerom, výsledok sme thresholdovali a ďalej upravili pomocou morfologických operácií.
+In order to obtain the mask of the moving object, we calculated the difference between the current frame and this average, thresholded the result and further modified it by using morphological operations.
 
 ```py
 # create binary mask from the computed difference
@@ -211,7 +209,7 @@ mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
 mask = cv2.dilate(mask, kernel, iterations=2)
 ```
 
-Na koniec sme ešte pre takto získanú masku vykreslili okolo objektu bounding box, pomocou rovnakej metódy ako v predchádzajúcich častiach.
+Finally, we drew a bounding box around the acquired mask by using the same method as in the previous experiments.
 
 ```py
 # draw bounding box
@@ -222,33 +220,33 @@ if box != None:
 
 ![](imgs/running_avg.gif)
 
-*Bounding box pre metódu running average*
+*Bounding box for the running average method*
 
 ![](imgs/running_avg_mask.gif)
 
-*Vytvorená maska pre metódu running average*
+*Created mask for the running average method*
 
 ![](imgs/running_avg_night.gif)
 
-*Bounding box pre metódu running average v tme*
+*Bounding box for the running average method in the dark*
 
 ![](imgs/running_avg_mask_night.gif)
 
-*Vytvorená maska pre metódu running average v tme*
+*Created mask for the running average method in the dark*
 
-Podobne ako v predchádzajúcich experimentoch s metódou **KNN**, aj v tomto prípade boli výsledky veľmi dobré na prvom videu, no na videu v tme sa nám nepodarilo objekt dostatočne vysegmentovať.
+Similar to the previous experiments with the **KNN** method, also in this case the results were very good on the first video, but we did not manage to segment the object sufficiently on the dark video.
 
-### Vylepšenie počiatočnej metódy pre sparse flow
-Ako ďalšie sme sa rozhodli vylepšiť metódu na počítanie sparse flow pomocou masky vytvorenej s **MoG**. Z veľkej časti sú tieto dve metódy rovnaké a jediný rozdiel je v metóde pre získavanie klúčových bodov, v ktorej sme špecifikovali vytvorenú masku.
+### Improvement of initial method for sparse flow
+Next, we decided to improve the sparse flow calculation method using a mask created with **MoG**. For the most part, the two methods are the same, and the only difference is in the keypoint extraction method in which we specified the created mask.
 
 ```py
 kp0 = cv2.goodFeaturesToTrack(old_gray, mask=mask_mog, qualityLevel=0.01, maxCorners=300, minDistance=10)
 ```
 
-V tomto prípade sme už mohli vytvárať kvalitnejšie a rovnako aj menší počet bodov pri znovu vytváraní bodov za behu programu. 
+In this case, we were able to create points of better quality and also reduce the number of points that need to be recreated during the program.
 
 ```py
-# generate new keypoints 
+# generate new keypoints
 if len(kp0) < 10:
     new_kp = cv2.goodFeaturesToTrack(gray, mask=mask_mog, qualityLevel=0.4, maxCorners=30, minDistance=100)
     kp0 = np.concatenate((kp0, new_kp), axis=0)
@@ -256,32 +254,32 @@ if len(kp0) < 10:
 
 ![](imgs/sparse_flow_updated.gif)
 
-*Sparse flow s použitím masky*
+*Sparse flow with using the mask*
 
 ![](imgs/sparse_flow_updated_night.gif)
 
-*Sparse flow s použitím masky v tme*
+*Sparse flow with using the mask in the dark*
 
-Ako môžeme vidieť na ukážkach vyššie metóda sa po špecifikovaní masky zlepšila, hlavne pri videu v noci.
+As we can see in the samples above, the methods improved after specifying the mask. It is especially visible for the video at night.
 
 ### Dense optical flow
-Ďalej sme taktiež vyskúšali identifikovať viaceré pohybujúce objekty pomocou **dense optical flow**, ktorý sme vypočítali s metódou `calcOpticalFlowFarneback()`, do ktorej okrem ostatných parametrov vstupuje taktiež predchádzajúci a súčastný frame, pre ktoré metóda vráti pole s vektormi posunutia (**u** - horizontálne, **v** - vertikálne) v aktuálnom frame-e vzhľadom na jeho zodpovedajúcu polohu v predchádzajúcom frame-e.
+Furthermore, we also tried to identify several moving objects using **dense optical flow**, which we calculated with the `calcOpticalFlowFarneback()` method, which, in addition to other parameters, also includes the previous and current frame, for which the method returns an array of displacement vectors (* *u** - horizontal, **v** - vertical) in the current frame with respect to its corresponding position in the previous frame.Furthermore, we also tried to identify several moving objects using **dense optical flow**, which we calculated with the `calcOpticalFlowFarneback()` method, which, in addition to other parameters, also includes the previous and current frame, for which the method returns an array of displacement vectors (* *u** - horizontal, **v** - vertical) in the current frame with respect to its corresponding position in the previous frame.
 
 ```py
 # calculate optical flow
 flow = cv2.calcOpticalFlowFarneback(old_gray, gray, None, pyr_scale=0.5, levels=4, winsize=17, iterations=3, poly_n=7, poly_sigma=1.7, flags=0)
 ```
 
-Hodnoty parametrov do funkcie sme zistili experimentálne podľa našich vstupných dát. 
+We determined the values ​​of the parameters to the function experimentally according to our input data.
 
-Podľa týchto vektorov si môžeme vypočítať velkosť vektorov (rýchlosť pohybu) a taktiež aj ich smer.
+According to these vectors, we can calculate the size of the vectors (speed of movement) and also their direction.
 
 ```py
 # get magnitute (speed of the motion) and angle (direction of the motion)
 magnitude, angle = cv2.cartToPolar(flow[:,:,0], flow[:,:,1])
 ```
 
-Velkosť vektorov môžeme použiť na vytvorenie masky pre pohybujúce sa objekty pomocou thresholdingu, ktorý použijeme na odstránenie 'malých' vektorov, teda objektov, ktoré sa nepohybujú. Vytvorenú masku ešte môžeme upraviť pomocou morfologických operácií.
+We can use the size of the vectors to create a mask for moving objects using thresholding, which we will use to remove 'small' vectors, i.e. objects that are not moving. We can still modify the created mask using morphological operations.
 
 ```py
 # create binary mask by thresholding the magnitude
@@ -289,7 +287,7 @@ _, mask = cv2.threshold(magnitude, threshold, 255, cv2.THRESH_BINARY)
 mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
 ```
 
-Na detekovanie pohybujúcich sa obrázkov použijeme bounding box-y, ktoré vykreslíme na základe kontúr zo získanej masky, ktoré si ešte vyfiltrujeme podľa ich plochy.
+To detect moving images, we  use bounding boxes, which are drawn based on the contours from the obtained mask, which we will filter according to their area.
 
 ```py
 # get suitable contours from the mask
@@ -306,12 +304,12 @@ for contour in filtered_contours:
     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 ```
 
-Optical flow sme vizualizovali podľa farieb, kde smer zodpovedá odtienu a rýchlosť hodnote farieb. Takto získané farbné reprezentácie sme ešte následne spojili s pôvodnym framom.
+We visualized the optical flow according to the colors, where the direction corresponds to the shade and the speed corresponds to the color value. We then connected the color representations obtained in this way with the original frame.
 
 ```py
 # create visualization
 # [OpenCV: Optical Flow](https://docs.opencv.org/4.x/d4/dee/tutorial_optical_flow.html)
-hsv[:,:,0] = angle * 180 / np.pi / 2 
+hsv[:,:,0] = angle * 180 / np.pi / 2
 hsv[:,:,1] = 255
 hsv[:,:,2] = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)
 visualization = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
@@ -322,37 +320,36 @@ combined = cv2.addWeighted(frame, 1, visualization, 1.5, 0)
 
 ![](imgs/dense_flow1.gif)
 
-*Bounding boxy pre pohybujúce sa objekty na prvom videu*
+*Bounding boxes for moving objects in the first video*
 
 ![](imgs/dense_flow1_mask.gif)
 
-*Maska pre prvé video*
+*Mask for first video*
 
 ![](imgs/dense_flow1_vis.gif)
 
-*Vizualizovaný optical flow pre prvé video*
+*Visualized optical flow for the first video*
 
 - - - -
 
 ![](imgs/dense_flow2.gif)
 
-*Bounding boxy pre pohybujúce sa objekty na druhom videu*
+*Bounding boxes for moving objects on the second video*
 
 ![](imgs/dense_flow2_mask.gif)
 
-*Maska pre druhé video*
+*Mask for second video*
 
 ![](imgs/dense_flow2_vis.gif)
 
-*Vizualizovaný optical flow pre druhé video*
+*Visualised optical flow for the second video*
 
 
-## Segmentácia
+## Segmentation
 ### GrabCut
-V tejto časti sme vytvorili interaktívny program, ktorý umožnuje používateľovi segmentovať daný obrázok metódou **GrabCut**. Program taktiež umožňuje ďalej upraviť získanú segmentáciu špecifikovaním pixelov prislúchajúcich pozadiu alebo danému objektu. Zdrojový kód k tejto časti je v `grab_cut.py`.
+In this section, we have created an interactive program that allows the user to segment a given image using the **GrabCut** method. The program also allows you to further modify the obtained segmentation by specifying the pixels belonging to the background or the given object. The source code for this part is in `grab_cut.py`.
 
-Na začiatku musí používatel definovať oblasť, v ktorej sa daný objekt nachádza. Túto oblasť urči pomocou dvoch bodov, ktoré pridá kliknutím pravého a ľavého tlačidla na myši. 
-
+At the beginning, the user must define the area in which the given object is located. This area is determined by two points that are selected by clicking the right and left mouse buttons.
 ```py
 # left mouse button events
 if event == cv2.EVENT_LBUTTONDOWN:
@@ -365,7 +362,7 @@ if event == cv2.EVENT_LBUTTONDOWN:
 
 elif event == cv2.EVENT_LBUTTONUP:
     drawing_left = False
-    
+
 # right mouse button events
 elif event == cv2.EVENT_RBUTTONDOWN:
     if select_rectangle:
@@ -379,7 +376,7 @@ elif event == cv2.EVENT_RBUTTONUP:
     drawing_right = False
 ```
 
-Po zadaní obidvoch bodov sa vytvorí obdĺžnik.
+After entering both points the rectangle is created.
 
 ```py
 # when both points are set, draw a rectangle connecting them
@@ -390,10 +387,10 @@ if point1 and point2 and select_rectangle:
     draw_scribble = True
 ```
 
-Používateľ má taktiež možnosť jednoduchých anotácií, kde pri držaní ľavého tlačidla na myši špecifikuje oblasť, ktorá obsahuje daný objekt a pri držaní pravého tlačidla zas pozadie. Kreslenie je možné len po špecifikovaní obdĺžnika alebo po stlačení tlačidla `t` na klávesnici. Používateľ má taktiež možnosť resetnúť program pomocou tlačidla `r`.
+The user also has the option of simple annotations, where when holding the left mouse button, he specifies the area that contains the given object, and when holding the right button, he specifies the background. Drawing is possible only after specifying a rectangle or after pressing the `t` key on the keyboard. The user also has the option to reset the program using the `r` key.
 
 ```py
- # mouse move events 
+ # mouse move events
 elif event == cv2.EVENT_MOUSEMOVE:
     if drawing_left and draw_scribble:
         cv2.circle(mask, (x, y), 4, cv2.GC_FGD, -1)
@@ -404,7 +401,7 @@ elif event == cv2.EVENT_MOUSEMOVE:
         cv2.circle(img, (x, y), 4, (255, 0, 0), -1)
 ```
 
-Samotná metóda na vytváranie segmentácií je pomerne jednoduchá. Pre vytvorenie segmentácie je potrebné stlačiť tlačidlo `s`.
+The method itself for creating segmentations is quite simple. To create a segmentation, it is necessary to press the `s` button.
 
 ```py
 # segmentation with grab cut
@@ -412,7 +409,7 @@ Samotná metóda na vytváranie segmentácií je pomerne jednoduchá. Pre vytvor
 def segment(img, mask, rect):
     bgd_model = np.zeros((1, 65), np.float64)
     fgd_model = np.zeros((1, 65), np.float64)
-    
+
     # use the mask when it contains scribbles
     if len(np.unique(mask)) > 1:
         print('Segmenting using mask')
@@ -421,7 +418,7 @@ def segment(img, mask, rect):
         print('Segmenting using rectangle')
         mode = cv2.GC_INIT_WITH_RECT
     mask, _, _ = cv2.grabCut(img, mask, rect, bgd_model, fgd_model, 5, mode)
-    
+
     # mask include values from 0 to 4, (background, foreground, possible background and possible forground)
     # change all background (0, 2) pixels to 0 and all foreground (1, 3) to 1
     tmp_mask = np.where((mask==0) | (mask==2), 0, 255).astype('uint8')
@@ -433,25 +430,25 @@ def segment(img, mask, rect):
     return img, mask
 ```
 
-Na začiatku sa vytvoria pomocné premenné `bgd_model` a `fgd_model`, ktoré používa metóda `grabCut()`. Ďalej sa zvolí mód vytvárania segmentácie, ktorý môže byť buď podľa definovaného obdĺžnika alebo masky (ktorá obsahuje hodnoty od 0 po 4). Následne sa už len zavolá metóda `grabCut()` so špecifikovanými parametrami. Táto metóda vracia vytvorenú masku, ktorú zbinarizujeme, teda jej zmeníme hodnoty 0 a 2 (predstavujúce pozadie) na 0 a hodnoty 1 a 3 (predstavujúce objekt) na 1. Na koniec už len vytvoríme finálnu segmentáciu spojením pôvodného obrázku a masky.
+At the beginning, helper variables `bgd_model` and `fgd_model` are created, which are used by the `grabCut()` method. Next, the segmentation creation mode is selected. The segmentations are created with either the defined rectangle or a mask (which contains values ​​from 0 to 4). Subsequently, the `grabCut()` method is called with the specified parameters. This method returns the created mask, which we binarize, that is, we change its values ​​0 and 2 (representing the background) to 0 and values ​​1 and 3 (representing the object) to 1. At the end, we just create the final segmentation by combining the original image and the mask.
 
 ![](imgs/grabcut1.gif)
 
-*Ukážka segmentovania pomocou GrabCut*
+*GrabCut segmentation demo*
 
 ![](imgs/grabcut2.gif)
 
-*Ďalšia ukážka segmentovania pomocou GrabCut*
+*Another demo of segmenting with GrabCut*
 
-### Super pixely
-V tejto časti sme sa pokúsili vytvoriť segmentácie s použitím superpixelov a metódy **SLIC**. Superpixely sme vytvorili pomocou metódy `cv2.ximgproc.createSuperpixelSLIC()` s použitím algoritmu `SLICO`. 
+### Super pixels
+In this section, we tried to create segmentations using superpixels and the **SLIC** method. We created superpixels using the `cv2.ximgproc.createSuperpixelSLIC()` method using the `SLICO` algorithm.
 
 ```py
 slic = cv2.ximgproc.createSuperpixelSLIC(gray, cv2.ximgproc.SLICO, region_size=30, ruler=20)
 slic.iterate(20)
 ```
 
-Následne sme vizualizovali okraje vzniknutých superpixelov.
+Subsequently, we visualized the edges of the created superpixels.
 
 ```py
 mask = slic.getLabelContourMask(thick_line=True)
@@ -461,7 +458,7 @@ contour_img[mask==255] = (0, 0, 255)
 
 ![](imgs/Sni%CC%81mka%20obrazovky%202023-04-24%20o%2022.56.18.png)
 
-Ďalej sme sa rozhodli vizualizovať priemernú farbu superpixelov. Pri tejto časti sme si najskôr zistili akému superpixelu prislúchajú jednotlivé pixely v obrázku. Následne sme si vytvorili pole, ktoré uchováva priemerné farby pre jednotlivé superpixely. Toto pole sme postupne napĺňali v cykle, kde sme si najskôr pomocou masky vybrali práve tie pixely, ktoré patria pod daný superpixel a potom jednoducho pomocou metódy `mean()` vypočítali ich priemernú farbu.
+Next, we decided to visualize the average color of the superpixels. In this part, we first found out which superpixel each pixel in the image belongs to. Subsequently, we created an array that stores the average colors for individual superpixels. We gradually filled this field in a cycle, where we first used a mask to select exactly those pixels that belong to a given superpixel and then simply calculated their average color using the `mean()` method.
 
 ```py
 # get corresponding labels for each pixel
@@ -475,7 +472,7 @@ for label in np.unique(labels):
     mean_colours[label] = cv2.mean(img, mask=tmp_mask)[:3]
 ```
 
-Na koniec sme už len priradili priemerné farby príslušným superpixelom.
+In the end, we just assigned the average colors to the respective superpixels.
 
 ```py
 # create a colour image by assigning mean colours to labels
@@ -484,65 +481,65 @@ mean_colour_img = mean_colours[labels]
 
 ![](imgs/butterfly.png)
 
-*Pôvodný obrázok motýla*
+*Original Butterfly Image*
 
 ![](imgs/slick_mean_colours.png)
 
-*Superpixely pre obrázok motýla*
+*Superpixels for butterfly image*
 
-Rovnakú metódu sme vyskúšali aj na ďalších obrázkoch.
+We tried the same method on other images as well.
 
 ![](imgs/bird.png)
 
-*Pôvodný obrázok vtáka*
+*Original Bird Image*
 
 ![](imgs/slick_mean_colour2.png)
 
-*Superpixely pre obrázok vtáka*
+*Superpixels for a bird image*
 
 ![](imgs/plane.png)
 
-*Pôvodný obrázok lietadla*
+*Original image of the plane*
 
 ![](imgs/slick_mean_colour3.png)
 
-*Superpixely pre obrázok lietadla*
+*Superpixels for an airplane image*
 
-#### Použitie iných algoritmov
-Ako ďalšie sme ešte vyskúšali použiť algoritmy `SLIC` a `MSLIC`.
+#### Use of other algorithms
+Next, we tried to use the `SLIC` and `MSLIC` algorithms.
 
-**Obrázok motýla**
+**Butterfly Picture**
 
 ![](imgs/butterfly_slic_contours.png)
 ![](imgs/butterfly_slic.png)
 
-*Algoritmus SLIC pre obrázok motýla*
+*SLIC algorithm for butterfly image*
 
 ![](imgs/butterfly_mslic_contours.png)
 ![](imgs/butterfly_mslic.png)
 
-*Algoritmus MSLIC pre obrázok motýla*
+*MSLIC algorithm for butterfly image*
 
-**Obrázok vtáka**
+**Bird Picture**
 
 ![](imgs/bird_slic_contours.png)
 ![](imgs/bird_slic.png)
 
-*Algoritmus SLIC pre obrázok vtáka*
+*SLIC algorithm for bird image*
 
 ![](imgs/bird_mslic_contours.png)
 ![](imgs/bird_mslic.png)
 
-*Algoritmus MSLIC pre obrázok vtáka*
+*MSLIC Algorithm for bird image*
 
-**Obrázok lietadla**
+**Image of a plane**
 
 ![](imgs/plane_slic_contours.png)
 ![](imgs/plane_slic.png)
 
-*Algoritmus SLIC pre obrázok lietadla*
+*SLIC Algorithm for aircraft image*
 
 ![](imgs/plane_mslic_contours.png)
 ![](imgs/plane_mslic.png)
 
-*Algoritmus MSLIC pre obrázok lietadla*
+*MSLIC Algorithm for aircraft image*

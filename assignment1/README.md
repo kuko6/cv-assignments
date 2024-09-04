@@ -1,18 +1,17 @@
 # assignment-1
-meno: Jakub Povinec
 
-použité metódy:
-* filtračné metódy (GaussianBlur)
-* thresholding, adaptívny thresholding
-* detekcia hrán (Canny)
-* morfologické operácie (diletation, erosion, closing, opening)
-* kontúrová analýza (findContours)
+used methods:
+* filtering methods (GaussianBlur)
+* thresholding, adaptive thresholding
+* edge detection (Canny)
+* morphological operations (diletation, erosion, closing, opening)
+* contour analysis (findContours)
 - - - -
-## Bubliny
-Pri tomto obrázku bolo mojim hlavným cieľom označiť jednotlivé bubliny a zistiť, analyzovať ich plochu. Kód k tomuto obrázku sa nachádza v `bubbles.ipynb`.
+## Bubbles
+My main goal for this picture was to identify individual bubbles and analyze their area. The code for this task can be found in `bubbles.ipynb`.
 
-### Pokus 1 - Canny
-Na začiatku som si načítal daný obrázok a prekonvertoval ho do grayscale.
+### Attempt 1 - Canny
+Initially, I loaded the image and converted it to grayscale.
 
 ```py
 img = cv2.imread('data/pena.tif')
@@ -21,17 +20,15 @@ gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 ![grayscale bubbles](imgs/bubbles/gray.png)
 
-#### Filtrovanie
-Ďalej som sa pomocou `GaussianBlur` snažil vyfiltrovať obrysy bublín, ktoré sa na obrázku nachádzajú vo vnútri povrchových bublín.
+#### Filtering
+Next, I used `GaussianBlur` in order to filter out the outlines of bubbles, which are located inside of the surface bubbles.
 
 ```py
 filtered = cv2.GaussianBlur(gray, (5, 5), 1)
 ```
 
-V tomto prípade som experimentoval s parametrami danej metódy, kedy sa pri takto zadefinovanom filtri najlepšie identifikujú hrany jednotlivých bublín a taktiež sa odstránia bubliny nachádzajúce sa vo vnútri povrchových bublín.
-
-#### Binarizácia
-Na binarizáciu vstupného obrázka som použil **Canny edge detector**.
+#### Binarization
+For binarization of the input image, I used the **Canny edge detector**.
 
 ```py
 edges = cv2.Canny(filtered, 20, 120)
@@ -39,7 +36,7 @@ edges = cv2.Canny(filtered, 20, 120)
 
 ![output from canny](imgs/bubbles/canny.png)
 
-Výstup z tohto algoritmu som ďalej upravil pomocou morfologických operácií. Ako prvú som použil **diletáciu**, pomocou ktorej som zvýraznil hrany jednotlivých bublín.
+The output from this algorithm was further modified using morphological operations. As first operation, I used **dilation**, which enhanced the edges of individual bubbles.
 
 ```py
 kernel = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE, ksize=(11, 11))
@@ -48,7 +45,7 @@ edges = cv2.dilate(edges, kernel, iterations=1)
 
 ![bubbles diletation](imgs/bubbles/diletation.png)
 
-Po diletácií zostali v hranách medzi bublinami 'diery'. Tieto diery, ale nepredstavujú ďalšie bubliny a tak som sa ich rozhodol odstrániť pomocou operácie **closing**.
+After dilatation, 'holes' remained in the edges between the bubbles. These holes, however, do not represent additional bubbles, so I decided to remove them using the **closing** operation.
 
 ```py
 kernel = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE, ksize=(11, 11))
@@ -57,17 +54,18 @@ edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel, iterations=1)
 
 ![bubbles closing](imgs/bubbles/closing.png)
 
-#### Kontúrová analýza
-Pred samotným hľadaním obrysov vo vytvorenej maske je potrebné masku invertovať pomocou `cv2.bitwise_not(edges)`.
+#### Contour Analysis
+Before actually searching for contours in the created mask, it is necessary to first invert the mask using `cv2.bitwise_not(edges)`.
 
 ![bubbles inverted](imgs/bubbles/inverted.png)
 
-Bez invertovania nefungovala dobre metóda na hľadanie kontúr a napríklad označovala okraj obrázka ako jednu veľkú kontúru, ako je vidieť aj na obrázku nižšie.
+Without inverting, the method for finding contours did not work well and for example marked the edge of the image as one big contour, as can also be seen in the image below.
 
 ![bubbles one big contour](imgs/bubbles/big_contour.png)
 
-Na nájdenie kontúr som použil metódu `findContours` s módom `RETR_EXTERNAL`, ktorý neoznačoval vnútorné bubliny. Následne som len prešiel cez nájdené kontúry, ktoré som zakreslil do pôvodného obrázka a taktiež som si uchoval ich plochu. Na koniec som označil najväčšiu kontúru a vypísal: počet bublín, priemernu plochu a plochu najväčšej bubliny.
+To find the contours, I used the `findContours` method with the `RETR_EXTERNAL` mode, which worked the best and did not mark the inner bubbles. Later, I iterated through the found contours, which I marked in the original image and also recorded their area.
 
+At the end, I marked the largest contour and printed out: the number of bubbles, the average area and the area of ​​the largest bubble.
 ```py
 contours, h = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 n = 0
@@ -93,7 +91,7 @@ print(f'Bubbles mean area: {np.mean(areas):.3f}')
 print('Bubbles max area: ', biggest['area'])
 ```
 
-#### Výsledný výstup
+#### Final Output
 ![bubbles contours canny](imgs/bubbles/contours_canny.png)
 
 ```
@@ -104,21 +102,21 @@ Bubbles mean area: 12235.473
 Bubbles max area:  155223.0
 ```
 
-### Pokus 2 - Thresholding
-Pri bublinách som sa taktiež rozhodol vyskúšať binarizovať vstupný obrázok iným spôsobom, pomocou thresholding-u.
+### Attempt 2 - Thresholding
+I also tried to use thresholding as a different way to binarize the input image.
 
-#### Binarizácia
+#### Binarization
 ```py
 edges = cv2.adaptiveThreshold(filtered, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C , cv2.THRESH_BINARY, 5, 2)
 ```
 
 ![bubbles thresh](imgs/bubbles/thresh.png)
 
-V tomto prípade je potrebné použiť adaptívny thresholding, keďže pri použiťí globálneho thresholdingu ovplivňuje výstup aj napr. rozloženie svetla pri fotení.
+In this case, it is necessary to use adaptive thresholding, since global thresholding can be affected by different factors e.g. distribution of light during photography.
 
 ![bubbles global thresh](imgs/bubbles/global_thresh.png)
 
-Ďalej som získanú masku upravil morfologickými operáciami **erode** a **opening**.
+Subsequently, I used morphological **erode** and **opening** to refine the obtained mask.
 
 ```py
 kernel = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE, ksize=(11, 11))
@@ -130,10 +128,10 @@ edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, kernel, iterations=2)
 
 ![bubbles thresh mask](imgs/bubbles/thresh_mask.png)
 
-#### Kontúrová analýza
-Metóda na hľadanie kontúr je rovnaká ako v predchádzajúcom prípade.
+#### Contour analysis
+The method for finding contours is the same as in the previous attempt.
 
-#### Výsledný výstup
+#### Final Output
 ![bubbles contours thresh](imgs/bubbles/thresh_contours.png)
 
 ```
@@ -144,21 +142,22 @@ Bubbles mean area: 14054.748
 Bubbles max area:  154924.5
 ```
 
-### Zhodnotenie
-Obe metódy na analyzovanie bublín dosiahli porovnateľné výsledky. Obidve označili rovnakú bublinu ako najväčšiu. Na druhú stranu sa líšia v počte označených bublín (rozdiel 99) a rovnako aj v priemernej ploche bublín (rozdiel 1819.275) a v ploche najväčšej bubliny (rozdiel 298.5).
+### Conclusion
+Both methods for analyzing bubbles achieved comparable results. Both marked the same bubble as the largest.
+On the other hand, they differ in the number of labeled bubbles (by 99) and also in the average area of ​​bubbles (difference 1819.275) and in the area of ​​the largest bubble (difference 298.5).
 
-Ako úspešnejšiu považujem prvú metódu, pri ktorej som dokázal presnejšie označiť väčší počet bublín.
+I consider the first method to be more successful, since I was able to more accurately mark a larger number of bubbles.
 
-## Bunky
-V tomto prípade som sa pokúsil vysegmentovať jednotlivé bunky z obrázku `TCGA-18-5592-01Z-00-DX1.tif`. Kód sa nachádza v `cells.ipynb`.
+## Cells
+In this case, I tried to segment individual cells from the image `TCGA-18-5592-01Z-00-DX1.tif`. The code is in `cells.ipynb`.
 
 ![cells](imgs/cells/cells.png)
 
-### Pokus 1
-Pri tomto pokuse som postupoval podobne ako pri obrázku s bublinami. Najskôr som si prekonvertoval obrázok do grayscale a následne som sa ho pokúsil vyfiltrovať pomocou `cv2.GaussianBlur(gray, (3, 3), 0)`.
+### Attempt 1
+For this experiment, I followed the same procedure as for the image with bubbles. First, I converted the image to grayscale and then tried to filter it by using `cv2.GaussianBlur(gray, (3, 3), 0)`.
 
-#### Binarizácia
-V tomto prípade stačilo použiť globálny thresholding.
+#### Binarization
+In this case, it was sufficient to use global thresholding.
 
 ```py
 _, mask = cv2.threshold(filtered, 0, 255, cv2.THRESH_OTSU)
@@ -166,7 +165,7 @@ _, mask = cv2.threshold(filtered, 0, 255, cv2.THRESH_OTSU)
 
 ![cells thresh](imgs/cells/thresh.png)
 
-Na vytvorenej maske som si všimol, že obsahuje pomerne veľa čiernych bodov, ktoré ale nepredstavujú samotné bunky. Na ich odstránenie som použil operáciu **closing** s veľkosťou jadra `(7, 7)`, vďaka ktorej sa mi podarilo obrázok čiastočne vyčistiť.
+I noticed on the created mask that it contains quite a lot of black dots, where these dots do not represent the cells themselves. To remove them, I used a **closing** operation with kernel size `(7, 7)`, thanks to which I managed to partially clean the image.
 
 ```py
 kernel = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE, ksize=(7, 7))
@@ -175,7 +174,7 @@ mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
 
 ![cells closing](imgs/cells/closing.png)
 
-Ako ďalšie som sa rozhodol aplikovať operáciu **erode** aby som aspoň čiastočne zaplnil biele miesta vo vnútri buniek.
+Next, I decided to apply the **erode** operation to partially fill the white spaces inside the cells.
 
 ```py
 kernel = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE, ksize=(3, 3))
@@ -184,13 +183,13 @@ mask = cv2.erode(mask, kernel, iterations=1)
 
 ![cells erode](imgs/cells/erode.png)
 
-#### Kontúrová analýza
-Pre nájdenie obrysov buniek som najskôr masku invertoval a rovnako ako pri bublinách pomocou metódy `findContours` identifikoval kontúry buniek.
+#### Contour Analysis
+To find contours of the cells, I first inverted the acquired mask and, as with bubbles, identified the cell contours by using the `findContours` method.
 
 ![cells inverted](imgs/cells/inverted.png)
 
-#### Výsledný výstup
-Ako je možné vidieť na obrázku nižšie, v tomto prípade sa mi nepodarilo dostatočne oddeliť jednotlivé bunky a kontúry skôr obkreslujú akési zhluky buniek.
+#### Final Output
+As can be see in the image below, I didn't manage to separate the individual cells enough and the identified contours rather outline some kind of clusters of cells.
 
 ![cells contours](imgs/cells/contours.png)
 
@@ -200,8 +199,8 @@ Take 1
 Number of cells:  332
 ```
 
-### Pokus 2
-V tomto prípade som namiesto konvertovania pôvodného obrázku, rozdelil obrázok na jednotlivé kanály, z ktorých vyzeral najlepšie práve **červený** kanál.
+### Attempt 2
+In this case, instead of converting the original image, I divided the image into individual channels, from which the **red** channel looked the most promising.
 
 ```py
 gray = img[:, :, 2] # using only red channel
@@ -209,8 +208,8 @@ filtered = cv2.GaussianBlur(gray, (5, 5), 0)
 ```
 ![cells one channel](imgs/cells/one_channel.png)
 
-#### Binarizácia
-Aj v tomto pokuse som použil globálny thresholding a vzniknutú masku som si hneď invertoval.
+#### Binarization
+In this experiment I also used global thresholding and inverted the acquired mask.
 
 ```py
 _, mask = cv2.threshold(filtered, 0, 255, cv2.THRESH_OTSU)
@@ -219,7 +218,7 @@ mask = cv2.bitwise_not(mask)
 
 ![cells inverted 2](imgs/cells/inverted2.png)
 
-Na masku som následne aplikoval len jednu morfologickú operáciu a to **opening**, vďaka ktorej som odstránil drobné biele body ako aj čiastočne vyplnil vnútro buniek.
+I subsequently applied **morphological opening**, thanks to which I was able to removed small white points and partially fill the inside of the cells.
 
 ```py
 kernel = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE, ksize=(11, 11))
@@ -228,11 +227,11 @@ mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
 
 ![cells opening 2](imgs/cells/opening2.png)
 
-#### Kontúrová analýza
-Kontúrová analýza bola opäť rovnaká ako v predchádzajúcich pokusoch.
+#### Contour Analysis
+The contour analysis was also the same as in the previous experiments.
 
-#### Výsledný výstup
-V tomto prípade sa mi už podarilo označiť väčšie množstvo buniek. Aj tak sa ale v niektorých prípadoch ešte označili väčšie zhluky buniek.
+#### Final Output
+In this case, I managed to mark a larger number of cells. Still, in some cases, larger clusters of cells were still marked.
 
 ![cells contours 2](imgs/cells/contours2.png)
 
@@ -242,9 +241,7 @@ Take 2
 Number of cells:  355
 ```
 
-### Zhodnotenie
-Analyzované metódy boli v podstade veľmi podobné. Obe využívali rovnakú filtráciu, binarizáciu a kontúrovú analýzu, a líšili sa hlavne v použitých morfologických operáciach a v spracovaní pôvodného obrázka. Druhá metóda bola nakoniec značne úspešnejšia a označila o **23 buniek viac**.
+### Conclusion
+The analyzed methods were essentially very similar. Both used the same filtering, binarization and contour analysis, and differed mainly in the applied morphological operations and in the processing of the original image. The second method was ultimately much more successful and marked **23 more cells**.
 
-Napriek tomu, že sa mi podarilo zlepšiť segmentáciu jednotlivých buniek bolo by zaujímavé použiť úplne inú metódu segmentácie, napríklad **watershed** a **distance transform**, ktoré sú vhodné práve v prípadoch kde sa objekty prekrývajú.
-
-### Pokus 3 - Watershed (nedokončené)
+Despite the fact that I managed to improve the segmentation of individual cells, it would be interesting to use a completely different method of segmentation, for example **watershed** and **distance transform**, which are suitable precisely in cases where objects overlap.

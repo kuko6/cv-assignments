@@ -20,7 +20,7 @@ def lab_conversion():
     print(np.max(targetLab[:,:,1]), np.min(targetLab[:,:,1]))
     print(np.max(targetLab[:,:,2]), np.min(targetLab[:,:,2]))
 
-    target_mean = targetLab.mean(axis=0).mean(axis=0) # toto je [L2, A2, B2]
+    target_mean = targetLab.mean(axis=0).mean(axis=0) # this is [L2, A2, B2]
     print(target_mean)
 
     print(target_mean.shape)
@@ -37,7 +37,7 @@ def keypoints():
     image_with_keypoints = cv2.drawKeypoints(img, img_kp, None)
 
     cv2.imshow('Image with Keypoints', image_with_keypoints)
-    
+
 
 if __name__ == '__main__':
     # keypoints()
