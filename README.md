@@ -8,4 +8,4 @@ assignment2 - Image Correction and Enhancement
 
 assignment3 -  Motion Tracking and Image Segmentation
 
-assignment4 - Classification of American Sign Language characters from a video
+assignment4 - Classification of ASL Characters from a Video
